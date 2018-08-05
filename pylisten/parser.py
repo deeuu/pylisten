@@ -80,6 +80,7 @@ class Parser():
                               data['data']['siteURL'])
             temp['experiment'] = data['experiment_id']
             temp['subject'] = data['name']
+            temp['submission_id'] = data['_id']
 
             frame = frame.append(temp)
 
@@ -91,13 +92,12 @@ class Parser():
 
             frame = pd.DataFrame()
 
-            for frame_id, filename in enumerate(listFiles(self.path)):
+            for filename in listFiles(self.path):
 
                 if (filename.endswith('.json') and
                         filename not in self.excludes):
 
                     result_frame = self.to_dataframe(self.load(filename))
-                    result_frame['frame_id'] = frame_id
                     frame = frame.append(result_frame)
         else:
 
