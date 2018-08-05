@@ -35,8 +35,55 @@ class Parser():
 
         return out
 
-    def to_dataframe(self, filename):
-        pass
+    def nullify_empty_page(self, page):
+
+        replace_with = None
+        if ('duration' not in page) or ('order' not in page):
+            page['duration'] = replace_with
+            page['order'] = replace_with
+            page['is_replicate'] = replace_with
+
+            for sound in page['sounds']:
+                sound['value'] = replace_with
+
+    def to_dataframe(self, data):
+
+        frame = pd.DataFrame()
+
+        pages = data['data']['pages']
+        for page in pages:
+
+            name = []
+            value = []
+            url = []
+
+            # If we have no entry for this page, set to missing value
+            self.nullify_empty_page(page)
+
+            for sound in page['sounds']:
+
+                name.append(sound['name'])
+                url.append(sound['url'])
+
+                value.append(sound['value'])
+
+            temp = pd.DataFrame({'sound': name,
+                                 'url': url,
+                                 'value': value,
+                                 'page': page['name'],
+                                 'page_order': page['order'],
+                                 'page_duration': page['duration'],
+                                 'is_replicate': page['is_replicate'],
+                                 })
+
+            temp['on_web'] = ('http://localhost:' not in
+                              data['data']['siteURL'])
+            temp['experiment'] = data['experiment_id']
+            temp['subject'] = data['name']
+
+            frame = frame.append(temp)
+
+        return frame
 
     def parse(self):
 
@@ -44,14 +91,14 @@ class Parser():
 
             frame = pd.DataFrame()
 
-            for filename in listFiles(self.path):
+            for frame_id, filename in enumerate(listFiles(self.path)):
 
                 if (filename.endswith('.json') and
                         filename not in self.excludes):
 
-                    frame = frame.append(
-                        self.to_dataframe(self.load(filename))
-                    )
+                    result_frame = self.to_dataframe(self.load(filename))
+                    result_frame['frame_id'] = frame_id
+                    frame = frame.append(result_frame)
         else:
 
             frame = self.to_dataframe(self.load(self.path))
@@ -83,44 +130,6 @@ class MUSHRA(Parser):
             temp = pd.DataFrame({'sound': name,
                                  'url': url,
                                  'rating': rating,
-                                 'page': page['name'],
-                                 'page_order': page['order'],
-                                 'page_duration': page['duration'],
-                                 'is_replicate': page['is_replicate'],
-                                 })
-
-            temp['on_web'] = ('http://localhost:' not in
-                              data['data']['siteURL'])
-            temp['experiment'] = data['experiment_id']
-            temp['subject'] = data['name']
-
-            frame = frame.append(temp)
-
-        return frame
-
-
-class PickTheBest(Parser):
-
-    def to_dataframe(self, data):
-
-        frame = pd.DataFrame()
-
-        pages = data['data']['pages']
-        for page in pages:
-
-            name = []
-            value = []
-            url = []
-
-            for sound in page['sounds']:
-
-                name.append(sound['name'])
-                value.append(sound['value'])
-                url.append(sound['url'])
-
-            temp = pd.DataFrame({'sound': name,
-                                 'url': url,
-                                 'value': value,
                                  'page': page['name'],
                                  'page_order': page['order'],
                                  'page_duration': page['duration'],
